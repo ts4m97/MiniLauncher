@@ -1,0 +1,26 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Publish portable build
+        run: dotnet publish MiniLauncher/MiniLauncher.csproj -c Release -r win-x64 --self-contained true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MiniLauncher-win-x64
+          path: MiniLauncher/bin/Release/net9.0-windows/win-x64/publish/MiniLauncher.exe
