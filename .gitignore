@@ -15,6 +15,7 @@ ui-smoke.png
 *.log
 *.tmp
 *.bak
+tools/
 
 # OS/editor noise
 .vs/
