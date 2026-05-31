@@ -1,11 +1,17 @@
 name: Release
 
 on:
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
 
 jobs:
   publish:
     runs-on: windows-latest
+    permissions:
+      contents: write
+      packages: write
 
     steps:
       - name: Checkout
@@ -19,8 +25,57 @@ jobs:
       - name: Publish portable build
         run: dotnet publish MiniLauncher/MiniLauncher.csproj -c Release -r win-x64 --self-contained true
 
+      - name: Prepare release zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist/MiniLauncher-win-x64 | Out-Null
+          Copy-Item MiniLauncher/bin/Release/net9.0-windows/win-x64/publish/MiniLauncher.exe dist/MiniLauncher-win-x64/MiniLauncher.exe
+          Copy-Item MiniLauncher-Portable/README.txt dist/MiniLauncher-win-x64/README.txt
+          Copy-Item LICENSE dist/MiniLauncher-win-x64/LICENSE.txt
+          Compress-Archive -Path dist/MiniLauncher-win-x64/* -DestinationPath dist/MiniLauncher-win-x64.zip -Force
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: MiniLauncher-win-x64
-          path: MiniLauncher/bin/Release/net9.0-windows/win-x64/publish/MiniLauncher.exe
+          path: dist/MiniLauncher-win-x64.zip
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/MiniLauncher-win-x64.zip
+          generate_release_notes: true
+
+      - name: Create NuGet package for GitHub Packages
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}"
+          if (-not $version.StartsWith("v")) { $version = "v0.0.0-dev" }
+          $version = $version.TrimStart("v")
+          New-Item -ItemType Directory -Force package/MiniLauncher.Portable/tools/win-x64 | Out-Null
+          Copy-Item dist/MiniLauncher-win-x64/MiniLauncher.exe package/MiniLauncher.Portable/tools/win-x64/MiniLauncher.exe
+          Copy-Item README.md package/MiniLauncher.Portable/README.md
+          Copy-Item LICENSE package/MiniLauncher.Portable/LICENSE.txt
+          @"
+          <?xml version="1.0" encoding="utf-8"?>
+          <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+            <metadata>
+              <id>MiniLauncher.Portable</id>
+              <version>$version</version>
+              <authors>ts4m97</authors>
+              <owners>ts4m97</owners>
+              <license type="expression">MIT</license>
+              <projectUrl>https://github.com/ts4m97/MiniLauncher</projectUrl>
+              <repository type="git" url="https://github.com/ts4m97/MiniLauncher" />
+              <description>A compact offline Windows app launcher built with WPF and .NET.</description>
+              <tags>windows wpf dotnet launcher productivity offline-first</tags>
+              <readme>README.md</readme>
+            </metadata>
+          </package>
+          "@ | Set-Content package/MiniLauncher.Portable/MiniLauncher.Portable.nuspec
+          Compress-Archive -Path package/MiniLauncher.Portable/* -DestinationPath dist/MiniLauncher.Portable.$version.nupkg -Force
+
+      - name: Publish GitHub Package
+        if: startsWith(github.ref, 'refs/tags/')
+        run: dotnet nuget push dist/*.nupkg --source "https://nuget.pkg.github.com/ts4m97/index.json" --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate

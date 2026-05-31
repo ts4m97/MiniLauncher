@@ -10,6 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/ts4m97/MiniLauncher/actions/workflows/dotnet.yml"><img alt="Build" src="https://github.com/ts4m97/MiniLauncher/actions/workflows/dotnet.yml/badge.svg" /></a>
+  <a href="https://github.com/ts4m97/MiniLauncher/releases"><img alt="Release" src="https://img.shields.io/github/v/release/ts4m97/MiniLauncher?include_prereleases&label=release" /></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg" /></a>
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows-2563EB.svg" />
   <img alt=".NET" src="https://img.shields.io/badge/.NET-9.0-512BD4.svg" />
@@ -91,6 +92,12 @@ See [Offline Store docs](docs/OFFLINE_STORE.md) for more examples.
 ## Project Status
 
 MiniLauncher is early but usable. See the [roadmap](docs/ROADMAP.md) for planned improvements.
+
+## Releases And Packages
+
+Download stable builds from [GitHub Releases](https://github.com/ts4m97/MiniLauncher/releases).
+
+Tagged releases also publish a `MiniLauncher.Portable` package to [GitHub Packages](https://github.com/ts4m97/MiniLauncher/packages). See [RELEASING.md](docs/RELEASING.md) for the release process.
 
 ## Contributing
 

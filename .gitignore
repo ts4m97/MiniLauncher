@@ -17,6 +17,8 @@ ui-smoke.png
 *.bak
 tools/
 github-profile/
+dist/
+package/
 
 # OS/editor noise
 .vs/
