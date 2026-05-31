@@ -78,4 +78,7 @@ jobs:
 
       - name: Publish GitHub Package
         if: startsWith(github.ref, 'refs/tags/')
-        run: dotnet nuget push dist/*.nupkg --source "https://nuget.pkg.github.com/ts4m97/index.json" --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate
+        shell: pwsh
+        run: |
+          $package = Get-ChildItem dist -Filter *.nupkg | Select-Object -First 1
+          dotnet nuget push $package.FullName --source "https://nuget.pkg.github.com/ts4m97/index.json" --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate
