@@ -1,0 +1,23 @@
+# Build output
+bin/
+obj/
+publish/
+*.user
+*.suo
+*.cache
+
+# Portable/release artifacts
+MiniLauncher-Portable/*.exe
+MiniLauncher-Portable/*.pdb
+ui-smoke.png
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+
+# OS/editor noise
+.vs/
+.vscode/
+Thumbs.db
+Desktop.ini
