@@ -1283,6 +1283,11 @@ public static class StoreReader
 
 public static class IconLoader
 {
+    private const uint FileAttributeDirectory = 0x00000010;
+    private const uint FileAttributeNormal = 0x00000080;
+    private const uint ShgfiIcon = 0x000000100;
+    private const uint ShgfiLargeIcon = 0x000000000;
+
     public static ImageSource Load(string path, string iconPath)
     {
         if (File.Exists(iconPath))
@@ -1303,30 +1308,62 @@ public static class IconLoader
             }
         }
 
+        var shellIcon = LoadShellIcon(path);
+        if (shellIcon is not null)
+        {
+            return shellIcon;
+        }
+
+        return CreateFallbackIcon(Directory.Exists(path));
+    }
+
+    private static ImageSource? LoadShellIcon(string path)
+    {
+        var info = new ShFileInfo();
+        var attributes = Directory.Exists(path) ? FileAttributeDirectory : FileAttributeNormal;
+        var handle = SHGetFileInfo(path, attributes, ref info, (uint)Marshal.SizeOf<ShFileInfo>(), ShgfiIcon | ShgfiLargeIcon);
+        if (handle == IntPtr.Zero || info.IconHandle == IntPtr.Zero)
+        {
+            return null;
+        }
+
         try
         {
-            using var icon = File.Exists(path) ? Icon.ExtractAssociatedIcon(path) : SystemIcons.WinLogo;
-            if (icon is not null)
-            {
-                var source = Imaging.CreateBitmapSourceFromHIcon(
-                    icon.Handle,
-                    Int32Rect.Empty,
-                    BitmapSizeOptions.FromWidthAndHeight(48, 48));
-                source.Freeze();
-                return source;
-            }
+            var source = Imaging.CreateBitmapSourceFromHIcon(
+                info.IconHandle,
+                Int32Rect.Empty,
+                BitmapSizeOptions.FromWidthAndHeight(48, 48));
+            source.Freeze();
+            return source;
         }
         catch
         {
-            // Fall through to generated icon.
+            return null;
         }
-
-        return CreateFallbackIcon();
+        finally
+        {
+            DestroyIcon(info.IconHandle);
+        }
     }
 
-    private static ImageSource CreateFallbackIcon()
+    private static ImageSource CreateFallbackIcon(bool isFolder)
     {
         var group = new DrawingGroup();
+        if (isFolder)
+        {
+            group.Children.Add(new GeometryDrawing(
+                new SolidColorBrush(System.Windows.Media.Color.FromRgb(245, 158, 11)),
+                null,
+                new RectangleGeometry(new Rect(5, 12, 18, 8), 3, 3)));
+            group.Children.Add(new GeometryDrawing(
+                new SolidColorBrush(System.Windows.Media.Color.FromRgb(251, 191, 36)),
+                null,
+                new RectangleGeometry(new Rect(4, 17, 40, 25), 5, 5)));
+            var folderImage = new DrawingImage(group);
+            folderImage.Freeze();
+            return folderImage;
+        }
+
         group.Children.Add(new GeometryDrawing(
             new SolidColorBrush(System.Windows.Media.Color.FromRgb(37, 99, 235)),
             null,
@@ -1335,4 +1372,29 @@ public static class IconLoader
         image.Freeze();
         return image;
     }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct ShFileInfo
+    {
+        public IntPtr IconHandle;
+        public int IconIndex;
+        public uint Attributes;
+
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+        public string DisplayName;
+
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)]
+        public string TypeName;
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr SHGetFileInfo(
+        string path,
+        uint fileAttributes,
+        ref ShFileInfo fileInfo,
+        uint fileInfoSize,
+        uint flags);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool DestroyIcon(IntPtr icon);
 }
